@@ -51,7 +51,7 @@ public class EmailNotifyNodePlugin extends AbstractNodeAmPlugin {
 
     @Override
     public String getPluginVersion() {
-        return "1.0.0";
+        return "1.0.1";
     }
 
     @Override
@@ -67,4 +67,11 @@ public class EmailNotifyNodePlugin extends AbstractNodeAmPlugin {
                 EmailNotifyNode.class
         );
     }
+
+    @Override
+    public void upgrade(String fromVersion) throws PluginException {
+        pluginTools.upgradeAuthNode(EmailNotifyNode.class);
+        super.upgrade(fromVersion);
+    }
+
 }

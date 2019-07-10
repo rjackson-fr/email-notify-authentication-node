@@ -57,7 +57,9 @@ public class EmailNotifyNode extends SingleOutcomeNode {
         @Attribute(order = 200)
         default String subject() { return "Subject"; }  
         @Attribute(order = 300)
-        default String message() { return "Message"; } 
+        default String message() { return "Message"; }
+        @Attribute(order = 350)
+        default boolean htmlType() { return false; }
         @Attribute(order = 400)
         default String from() { return "admin@forgerock.com"; }
         @Attribute(order = 500)
@@ -168,9 +170,12 @@ public class EmailNotifyNode extends SingleOutcomeNode {
             if (smtpHostName == null || smtpHostPort == null) {
                 sendMail.postMail(tos, subject, message, from);
             } else {
-                sendMail.postMail(tos, subject, message, from, "UTF-8", smtpHostName,
+
+                String mimeType = (config.htmlType()) ? "text/html" : "text/plain";
+                sendMail.postMail(tos, subject, message, from, mimeType, "UTF-8", smtpHostName,
                         smtpHostPort, smtpUserName, smtpUserPassword,
                         sslEnabled, startTls);
+
             }
             debug.error("[" + DEBUG_FILE + "]: " + "sent email to " + to);
         } catch (Exception e) {
