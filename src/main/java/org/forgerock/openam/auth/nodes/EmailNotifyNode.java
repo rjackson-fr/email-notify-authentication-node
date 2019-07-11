@@ -107,22 +107,22 @@ public class EmailNotifyNode extends SingleOutcomeNode {
                 if (idAttrs == null || idAttrs.isEmpty()) {
                     debug.error("[" + DEBUG_FILE + "]: " + "unable to find email user attribute: " + config.attribute());
                 } else {
-                    emailAddr = (String)idAttrs.iterator().next();
+                    emailAddr = (String) idAttrs.iterator().next();
                 }
             } catch (IdRepoException | SSOException e) {
                 debug.error("[" + DEBUG_FILE + "]: " + "error getting atttibute '{}' ", e);
             }
+        }
 
-            // Substitute any variables found in subject and message
-            // Strings containing "{{var}}" will be replaced by the content of sharedState "var" if found
-            String subject = hydrate(context,config.subject());
-            String message = hydrate(context,config.message());
-            try {
-                debug.error("[" + DEBUG_FILE + "]: " + "sending email to " + emailAddr);
-                sendEmailMessage(config.from(), emailAddr, subject, message);
-            } catch (AuthLoginException e) {
-                debug.error("[" + DEBUG_FILE + "]: " + "AuthLoginException exception: " + e);  
-            }
+        // Substitute any variables found in subject and message
+        // Strings containing "{{var}}" will be replaced by the content of sharedState "var" if found
+        String subject = hydrate(context,config.subject());
+        String message = hydrate(context,config.message());
+        try {
+            debug.error("[" + DEBUG_FILE + "]: " + "sending email to " + emailAddr);
+            sendEmailMessage(config.from(), emailAddr, subject, message);
+        } catch (AuthLoginException e) {
+            debug.error("[" + DEBUG_FILE + "]: " + "AuthLoginException exception: " + e);
         }
         return goToNext().build();
     }
