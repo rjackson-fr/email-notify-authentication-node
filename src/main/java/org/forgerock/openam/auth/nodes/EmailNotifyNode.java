@@ -28,6 +28,7 @@ import com.iplanet.sso.SSOException;
 import com.sun.identity.idm.AMIdentity;
 import com.sun.identity.idm.IdRepoException;
 import org.forgerock.openam.annotations.sm.Attribute;
+import org.forgerock.openam.sm.annotations.adapters.Password;
 import org.forgerock.openam.auth.node.api.*;
 import org.forgerock.openam.core.CoreWrapper;
 import org.slf4j.Logger;
@@ -67,10 +68,11 @@ public class EmailNotifyNode extends SingleOutcomeNode {
         default String smtpHostName() { return "localhost"; }
         @Attribute(order = 600)
         default String smtpHostPort() { return "25"; }
-        @Attribute(order = 700)
-        default String smtpUserName() { return "username"; }
+        @Attribute(order = 700, requiredValue = false)
+        String smtpUserName();
         @Attribute(order = 800)
-        default String smtpUserPassword() { return "secret123"; }
+        @Password
+        char[] smtpUserPassword();
         @Attribute(order = 900)
         default boolean smtpSSLEnabled() { return false; }
     }
@@ -157,7 +159,10 @@ public class EmailNotifyNode extends SingleOutcomeNode {
         String smtpHostName = config.smtpHostName();
         String smtpHostPort = config.smtpHostPort();
         String smtpUserName = config.smtpUserName();
-        String smtpUserPassword = config.smtpUserPassword();
+        String smtpUserPassword = null;
+        if (config.smtpUserPassword() != null) {
+            smtpUserPassword = String.valueOf(config.smtpUserPassword());
+        }
         boolean sslEnabled = config.smtpSSLEnabled();
         boolean startTls = config.smtpSSLEnabled();
             
