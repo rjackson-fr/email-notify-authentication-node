@@ -51,7 +51,7 @@ public class EmailNotifyNodePlugin extends AbstractNodeAmPlugin {
 
     @Override
     public String getPluginVersion() {
-        return "1.0.1";
+        return "1.0.4";
     }
 
     @Override
