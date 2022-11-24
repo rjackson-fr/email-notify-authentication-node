@@ -33,6 +33,7 @@ import org.forgerock.openam.auth.node.api.*;
 import org.forgerock.openam.core.CoreWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import javax.inject.Inject;
 import java.util.Set;
 import static org.forgerock.openam.auth.node.api.SharedStateConstants.REALM;
@@ -96,17 +97,17 @@ public class EmailNotifyNode extends SingleOutcomeNode {
     @Override
     public Action process(TreeContext context) throws NodeProcessException {
 
-        AMIdentity userIdentity = coreWrapper.getIdentity(context.sharedState.get(USERNAME).asString(), context.sharedState.get(REALM).asString());
+        AMIdentity userIdentity = coreWrapper.getIdentity(context.getStateFor(this).get(USERNAME).asString(), context.getStateFor(this).get(REALM).asString());
         String emailAddr = "";
 
         // Override email "to" field if found in sharedState
-        if (context.sharedState.get("email").asString() != null) {
-            emailAddr = context.sharedState.get("email").asString();
+        if (context.getStateFor(this).get("email").asString() != null) {
+            emailAddr = context.getStateFor(this).get("email").asString();
             debug.error("[" + NODE_NAME + "]: " + "got email address from sharedState: " + emailAddr);
         } else {
             debug.error("[" + NODE_NAME + "]: " + "looking for email address attribute: " + config.attribute());
             try {
-                Set idAttrs = userIdentity.getAttribute(config.attribute());
+                Set<String> idAttrs = userIdentity.getAttribute(config.attribute());
                 if (idAttrs == null || idAttrs.isEmpty()) {
                     debug.error("[" + NODE_NAME + "]: " + "unable to find email user attribute: " + config.attribute());
                 } else {
@@ -140,7 +141,7 @@ public class EmailNotifyNode extends SingleOutcomeNode {
             if ((start != -1) && (end != -1)) {
                 target = target + source.substring(0,start);
                 String variable = source.substring(start+2,end);
-                target += context.sharedState.get(variable).asString();
+                target += context.getStateFor(this).get(variable).asString();
                 source = source.substring(end+2,source.length());
             } else {
                 target = target + source;

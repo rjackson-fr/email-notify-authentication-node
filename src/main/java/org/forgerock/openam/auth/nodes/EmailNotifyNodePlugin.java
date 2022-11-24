@@ -21,57 +21,80 @@
 
 package org.forgerock.openam.auth.nodes;
 
-import static java.util.Arrays.asList;
-
-import javax.inject.Inject;
-
 import org.forgerock.openam.auth.node.api.AbstractNodeAmPlugin;
 import org.forgerock.openam.auth.node.api.Node;
 import org.forgerock.openam.plugins.PluginException;
-import org.forgerock.openam.sm.AnnotatedServiceRegistry;
+import org.forgerock.openam.plugins.StartupType;
 
-import com.iplanet.sso.SSOException;
-import com.sun.identity.sm.SMSException;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Map;
 
 /**
  * Core nodes installed by default with no engine dependencies.
  */
 public class EmailNotifyNodePlugin extends AbstractNodeAmPlugin {
 
-    private final AnnotatedServiceRegistry serviceRegistry;
-
-    /**
-     * DI-enabled constructor.
-     * @param serviceRegistry A service registry instance.
-     */
-    @Inject
-    public EmailNotifyNodePlugin(AnnotatedServiceRegistry serviceRegistry) {
-        this.serviceRegistry = serviceRegistry;
-    }
-
-    @Override
-    public String getPluginVersion() {
-        return "1.0.4";
-    }
-
-    @Override
-    public void onStartup() throws PluginException {
-        for (Class<? extends Node> nodeClass : getNodes()) {
-            pluginTools.registerAuthNode(nodeClass);
+    static private String currentVersion = "1.0.5";
+    
+        /**
+         * Specify the Map of list of node classes that the plugin is providing. These will then be installed and
+         * registered at the appropriate times in plugin lifecycle.
+         *
+         * @return The list of node classes.
+         */
+        @Override
+        protected Map<String, Iterable<? extends Class<? extends Node>>> getNodesByVersion() {
+            return Collections.singletonMap(EmailNotifyNodePlugin.currentVersion,
+                                            Arrays.asList(EmailNotifyNode.class));
+        }
+    
+        /**
+         * Handle plugin installation. This method will only be called once, on first AM startup once the plugin
+         * is included in the classpath. The {@link #onStartup()} method will be called after this one.
+         * <p>
+         * No need to implement this unless your AuthNode has specific requirements on install.
+         */
+        @Override
+        public void onInstall() throws PluginException {
+            super.onInstall();
+        }
+    
+        /**
+         * Handle plugin startup. This method will be called every time AM starts, after {@link #onInstall()},
+         * {@link #onAmUpgrade(String, String)} and {@link #upgrade(String)} have been called (if relevant).
+         * <p>
+         * No need to implement this unless your AuthNode has specific requirements on startup.
+         *
+         * @param startupType The type of startup that is taking place.
+         */
+        @Override
+        public void onStartup(StartupType startupType) throws PluginException {
+            super.onStartup(startupType);
+        }
+    
+        /**
+         * This method will be called when the version returned by {@link #getPluginVersion()} is higher than the
+         * version already installed. This method will be called before the {@link #onStartup()} method.
+         * <p>
+         * No need to implement this untils there are multiple versions of your auth node.
+         *
+         * @param fromVersion The old version of the plugin that has been installed.
+         */
+        @Override
+        public void upgrade(String fromVersion) throws PluginException {
+            pluginTools.upgradeAuthNode(EmailNotifyNode.class);
+            super.upgrade(fromVersion);
+        }
+    
+        /**
+         * The plugin version. This must be in semver (semantic version) format.
+         *
+         * @return The version of the plugin.
+         * @see <a href="https://www.osgi.org/wp-content/uploads/SemanticVersioning.pdf">Semantic Versioning</a>
+         */
+        @Override
+        public String getPluginVersion() {
+            return EmailNotifyNodePlugin.currentVersion;
         }
     }
-
-    @Override
-    protected Iterable<? extends Class<? extends Node>> getNodes() {
-        return asList(
-                EmailNotifyNode.class
-        );
-    }
-
-    @Override
-    public void upgrade(String fromVersion) throws PluginException {
-        pluginTools.upgradeAuthNode(EmailNotifyNode.class);
-        super.upgrade(fromVersion);
-    }
-
-}
