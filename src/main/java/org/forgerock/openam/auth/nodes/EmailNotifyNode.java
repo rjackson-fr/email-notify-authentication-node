@@ -42,12 +42,11 @@ import com.sun.identity.authentication.spi.AuthLoginException;
 
 
 
-
 /**
  * An authentication node to send an email.
  */
 @Node.Metadata(outcomeProvider = SingleOutcomeNode.OutcomeProvider.class,
-        configClass = EmailNotifyNode.Config.class)
+        configClass = EmailNotifyNode.Config.class,
         tags             = {"marketplace"})
 public class EmailNotifyNode extends SingleOutcomeNode {
 
