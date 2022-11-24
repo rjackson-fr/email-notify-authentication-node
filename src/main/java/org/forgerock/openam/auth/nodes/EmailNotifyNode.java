@@ -48,6 +48,7 @@ import com.sun.identity.authentication.spi.AuthLoginException;
  */
 @Node.Metadata(outcomeProvider = SingleOutcomeNode.OutcomeProvider.class,
         configClass = EmailNotifyNode.Config.class)
+        tags             = {"marketplace"})
 public class EmailNotifyNode extends SingleOutcomeNode {
 
     /**
