@@ -37,18 +37,26 @@ import javax.inject.Inject;
 import java.util.Set;
 import static org.forgerock.openam.auth.node.api.SharedStateConstants.REALM;
 import static org.forgerock.openam.auth.node.api.SharedStateConstants.USERNAME;
+import static org.forgerock.openam.auth.node.api.Action.goTo;
 import com.iplanet.am.util.AMSendMail;
 import com.sun.identity.authentication.spi.AuthLoginException;
-
+import java.util.ResourceBundle;
+import java.util.List;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.ArrayList;
+import org.forgerock.util.i18n.PreferredLocales;
+import org.forgerock.json.JsonValue;
+import com.google.common.collect.ImmutableList;
 
 
 /**
  * An authentication node to send an email.
  */
-@Node.Metadata(outcomeProvider = SingleOutcomeNode.OutcomeProvider.class,
+@Node.Metadata(outcomeProvider = EmailNotifyNode.EmailNotifyNodeOutcomeProvider.class,
         configClass = EmailNotifyNode.Config.class,
         tags             = {"marketplace"})
-public class EmailNotifyNode extends SingleOutcomeNode {
+public class EmailNotifyNode implements Node {
 
     /**
      * Configuration for the node.
@@ -75,12 +83,16 @@ public class EmailNotifyNode extends SingleOutcomeNode {
         char[] smtpUserPassword();
         @Attribute(order = 900)
         default boolean smtpSSLEnabled() { return false; }
+        @Attribute(order = 910)
+        default boolean smtpStartTLSEnabled() { return false; }
     }
 
     private final Config config;
     private final CoreWrapper coreWrapper;
     private final static String NODE_NAME = "EmailNotifyNode";
     private static final Logger debug = LoggerFactory.getLogger(EmailNotifyNode.class);
+    private static final String SUCCESS_OUTCOME = "success";
+    private static final String FAILURE_OUTCOME = "failure";
 
     /**
      * Guice constructor.
@@ -102,9 +114,9 @@ public class EmailNotifyNode extends SingleOutcomeNode {
         // Override email "to" field if found in sharedState
         if (context.sharedState.get("email").asString() != null) {
             emailAddr = context.sharedState.get("email").asString();
-            debug.error("[" + NODE_NAME + "]: " + "got email address from sharedState: " + emailAddr);
+            debug.debug("[" + NODE_NAME + "]: " + "got email address from sharedState: " + emailAddr);
         } else {
-            debug.error("[" + NODE_NAME + "]: " + "looking for email address attribute: " + config.attribute());
+            debug.debug("[" + NODE_NAME + "]: " + "looking for email address attribute: " + config.attribute());
             try {
                 Set idAttrs = userIdentity.getAttribute(config.attribute());
                 if (idAttrs == null || idAttrs.isEmpty()) {
@@ -122,12 +134,14 @@ public class EmailNotifyNode extends SingleOutcomeNode {
         String subject = hydrate(context,config.subject());
         String message = hydrate(context,config.message());
         try {
-            debug.error("[" + NODE_NAME + "]: " + "sending email to " + emailAddr);
+            debug.debug("[" + NODE_NAME + "]: " + "sending email to " + emailAddr);
             sendEmailMessage(config.from(), emailAddr, subject, message);
         } catch (AuthLoginException e) {
             debug.error("[" + NODE_NAME + "]: " + "AuthLoginException exception: " + e);
+            context.sharedState.add("errorMessage", e.getMessage());
+            return Action.goTo(FAILURE_OUTCOME).build();
         }
-        return goToNext().build();
+        return Action.goTo(SUCCESS_OUTCOME).build();
     }
 
 
@@ -164,7 +178,7 @@ public class EmailNotifyNode extends SingleOutcomeNode {
             smtpUserPassword = String.valueOf(config.smtpUserPassword());
         }
         boolean sslEnabled = config.smtpSSLEnabled();
-        boolean startTls = config.smtpSSLEnabled();
+        boolean startTls = config.smtpStartTLSEnabled();
             
         // postMail expects an array of recipients
         String tos[] = new String[1];
@@ -183,11 +197,21 @@ public class EmailNotifyNode extends SingleOutcomeNode {
                         sslEnabled, startTls);
 
             }
-            debug.error("[" + NODE_NAME + "]: " + "sent email to " + to);
+            debug.debug("[" + NODE_NAME + "]: " + "sent email to " + to);
         } catch (Exception e) {
             debug.error("[" + NODE_NAME + "]: " + "sendMail exception: " + e);  
             throw new AuthLoginException("Failed to send email to " + to, e);
         }
     }
    
+
+    /**
+     * The possible outcomes for a suspended node.
+     */
+    public static final class EmailNotifyNodeOutcomeProvider implements StaticOutcomeProvider {
+        @Override
+        public List<Outcome> getOutcomes(PreferredLocales locales) {
+            return ImmutableList.of(new Outcome(SUCCESS_OUTCOME, SUCCESS_OUTCOME), new Outcome(FAILURE_OUTCOME, FAILURE_OUTCOME));
+        }
+    }
 }
