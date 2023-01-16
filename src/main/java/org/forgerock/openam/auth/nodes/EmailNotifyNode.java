@@ -70,8 +70,8 @@ public class EmailNotifyNode extends SingleOutcomeNode {
         default String smtpHostPort() { return "25"; }
         @Attribute(order = 700, requiredValue = false)
         String smtpUserName();
-        @Attribute(order = 800)
-        @Password
+        @Attribute(order = 800, requiredValue = false)
+        @Password 
         char[] smtpUserPassword();
         @Attribute(order = 900)
         default boolean smtpSSLEnabled() { return false; }
@@ -102,9 +102,9 @@ public class EmailNotifyNode extends SingleOutcomeNode {
         // Override email "to" field if found in sharedState
         if (context.sharedState.get("email").asString() != null) {
             emailAddr = context.sharedState.get("email").asString();
-            debug.error("[" + NODE_NAME + "]: " + "got email address from sharedState: " + emailAddr);
+            debug.debug("[" + NODE_NAME + "]: " + "got email address from sharedState: " + emailAddr);
         } else {
-            debug.error("[" + NODE_NAME + "]: " + "looking for email address attribute: " + config.attribute());
+            debug.debug("[" + NODE_NAME + "]: " + "looking for email address attribute: " + config.attribute());
             try {
                 Set idAttrs = userIdentity.getAttribute(config.attribute());
                 if (idAttrs == null || idAttrs.isEmpty()) {
@@ -122,7 +122,7 @@ public class EmailNotifyNode extends SingleOutcomeNode {
         String subject = hydrate(context,config.subject());
         String message = hydrate(context,config.message());
         try {
-            debug.error("[" + NODE_NAME + "]: " + "sending email to " + emailAddr);
+            debug.debug("[" + NODE_NAME + "]: " + "sending email to " + emailAddr);
             sendEmailMessage(config.from(), emailAddr, subject, message);
         } catch (AuthLoginException e) {
             debug.error("[" + NODE_NAME + "]: " + "AuthLoginException exception: " + e);
@@ -183,7 +183,7 @@ public class EmailNotifyNode extends SingleOutcomeNode {
                         sslEnabled, startTls);
 
             }
-            debug.error("[" + NODE_NAME + "]: " + "sent email to " + to);
+            debug.debug("[" + NODE_NAME + "]: " + "sent email to " + to);
         } catch (Exception e) {
             debug.error("[" + NODE_NAME + "]: " + "sendMail exception: " + e);  
             throw new AuthLoginException("Failed to send email to " + to, e);
