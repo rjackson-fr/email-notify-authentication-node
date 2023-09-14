@@ -27,10 +27,12 @@ import com.google.inject.assistedinject.Assisted;
 import com.iplanet.sso.SSOException;
 import com.sun.identity.idm.AMIdentity;
 import com.sun.identity.idm.IdRepoException;
-import com.sun.identity.shared.debug.Debug;
 import org.forgerock.openam.annotations.sm.Attribute;
+import org.forgerock.openam.sm.annotations.adapters.Password;
 import org.forgerock.openam.auth.node.api.*;
 import org.forgerock.openam.core.CoreWrapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import javax.inject.Inject;
 import java.util.Set;
 import static org.forgerock.openam.auth.node.api.SharedStateConstants.REALM;
@@ -40,12 +42,12 @@ import com.sun.identity.authentication.spi.AuthLoginException;
 
 
 
-
 /**
  * An authentication node to send an email.
  */
 @Node.Metadata(outcomeProvider = SingleOutcomeNode.OutcomeProvider.class,
-        configClass = EmailNotifyNode.Config.class)
+        configClass = EmailNotifyNode.Config.class,
+        tags             = {"marketplace"})
 public class EmailNotifyNode extends SingleOutcomeNode {
 
     /**
@@ -66,18 +68,19 @@ public class EmailNotifyNode extends SingleOutcomeNode {
         default String smtpHostName() { return "localhost"; }
         @Attribute(order = 600)
         default String smtpHostPort() { return "25"; }
-        @Attribute(order = 700)
-        default String smtpUserName() { return "username"; }
-        @Attribute(order = 800)
-        default String smtpUserPassword() { return "secret123"; }
+        @Attribute(order = 700, requiredValue = false)
+        String smtpUserName();
+        @Attribute(order = 800, requiredValue = false)
+        @Password 
+        char[] smtpUserPassword();
         @Attribute(order = 900)
         default boolean smtpSSLEnabled() { return false; }
     }
 
     private final Config config;
     private final CoreWrapper coreWrapper;
-    private final static String DEBUG_FILE = "EmailNotifyNode";
-    protected Debug debug = Debug.getInstance(DEBUG_FILE);
+    private final static String NODE_NAME = "EmailNotifyNode";
+    private static final Logger debug = LoggerFactory.getLogger(EmailNotifyNode.class);
 
     /**
      * Guice constructor.
@@ -99,18 +102,18 @@ public class EmailNotifyNode extends SingleOutcomeNode {
         // Override email "to" field if found in sharedState
         if (context.sharedState.get("email").asString() != null) {
             emailAddr = context.sharedState.get("email").asString();
-            debug.error("[" + DEBUG_FILE + "]: " + "got email address from sharedState: " + emailAddr);
+            debug.debug("[" + NODE_NAME + "]: " + "got email address from sharedState: " + emailAddr);
         } else {
-            debug.error("[" + DEBUG_FILE + "]: " + "looking for email address attribute: " + config.attribute());
+            debug.debug("[" + NODE_NAME + "]: " + "looking for email address attribute: " + config.attribute());
             try {
                 Set idAttrs = userIdentity.getAttribute(config.attribute());
                 if (idAttrs == null || idAttrs.isEmpty()) {
-                    debug.error("[" + DEBUG_FILE + "]: " + "unable to find email user attribute: " + config.attribute());
+                    debug.error("[" + NODE_NAME + "]: " + "unable to find email user attribute: " + config.attribute());
                 } else {
                     emailAddr = (String) idAttrs.iterator().next();
                 }
             } catch (IdRepoException | SSOException e) {
-                debug.error("[" + DEBUG_FILE + "]: " + "error getting atttibute '{}' ", e);
+                debug.error("[" + NODE_NAME + "]: " + "error getting atttibute '{}' ", e);
             }
         }
 
@@ -119,10 +122,10 @@ public class EmailNotifyNode extends SingleOutcomeNode {
         String subject = hydrate(context,config.subject());
         String message = hydrate(context,config.message());
         try {
-            debug.error("[" + DEBUG_FILE + "]: " + "sending email to " + emailAddr);
+            debug.debug("[" + NODE_NAME + "]: " + "sending email to " + emailAddr);
             sendEmailMessage(config.from(), emailAddr, subject, message);
         } catch (AuthLoginException e) {
-            debug.error("[" + DEBUG_FILE + "]: " + "AuthLoginException exception: " + e);
+            debug.error("[" + NODE_NAME + "]: " + "AuthLoginException exception: " + e);
         }
         return goToNext().build();
     }
@@ -156,7 +159,10 @@ public class EmailNotifyNode extends SingleOutcomeNode {
         String smtpHostName = config.smtpHostName();
         String smtpHostPort = config.smtpHostPort();
         String smtpUserName = config.smtpUserName();
-        String smtpUserPassword = config.smtpUserPassword();
+        String smtpUserPassword = null;
+        if (config.smtpUserPassword() != null) {
+            smtpUserPassword = String.valueOf(config.smtpUserPassword());
+        }
         boolean sslEnabled = config.smtpSSLEnabled();
         boolean startTls = config.smtpSSLEnabled();
             
@@ -177,9 +183,9 @@ public class EmailNotifyNode extends SingleOutcomeNode {
                         sslEnabled, startTls);
 
             }
-            debug.error("[" + DEBUG_FILE + "]: " + "sent email to " + to);
+            debug.debug("[" + NODE_NAME + "]: " + "sent email to " + to);
         } catch (Exception e) {
-            debug.error("[" + DEBUG_FILE + "]: " + "sendMail exception: " + e);  
+            debug.error("[" + NODE_NAME + "]: " + "sendMail exception: " + e);  
             throw new AuthLoginException("Failed to send email to " + to, e);
         }
     }
