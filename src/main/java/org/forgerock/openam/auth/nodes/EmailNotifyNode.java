@@ -38,7 +38,7 @@ import java.util.Set;
 import static org.forgerock.openam.auth.node.api.SharedStateConstants.REALM;
 import static org.forgerock.openam.auth.node.api.SharedStateConstants.USERNAME;
 import static org.forgerock.openam.auth.node.api.Action.suspend;
-import static   .SuspendedTextOutputCallback.info;
+import static org.forgerock.openam.auth.node.api.SuspendedTextOutputCallback.info;
 import com.iplanet.am.util.AMSendMail;
 import com.sun.identity.authentication.spi.AuthLoginException;
 import java.net.URI;
