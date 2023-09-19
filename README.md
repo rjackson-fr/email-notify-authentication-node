@@ -26,7 +26,11 @@ Copy the .jar file from the ../target directory into the ../web-container/webapp
 <b>Usage</b>
 <br/>
 This node can be used to send an email message to a user, for example, when used in conjunction with Account Lockout node, to inform the user by email in the change to their account status. If sharedState value of "email" exists then this is used as the recipient email address, otherwise the authenticating user's profile email address is used. Both the email subject and message body can be configured to inject sharedState variables. For example, setting the message body to "Dear {{username}}, Welcome to AM!" will replace {{username}} with the user's real username (if present in sharedState). 
-
+<br/>
+<br/>
+<b>Suspend</b>
+<br/>
+The optional feature will allow the node to suspend the journey in the same way as the OOTB email suspend node.  The {{resumeURI}} variable will be made available to the node (and the shared state) so that it can be included in body or subject templates (for the hydrate call)
 <br/>
 <br/>
 <b>To Build</b>

@@ -37,9 +37,11 @@ import javax.inject.Inject;
 import java.util.Set;
 import static org.forgerock.openam.auth.node.api.SharedStateConstants.REALM;
 import static org.forgerock.openam.auth.node.api.SharedStateConstants.USERNAME;
+import static org.forgerock.openam.auth.node.api.Action.suspend;
+import static   .SuspendedTextOutputCallback.info;
 import com.iplanet.am.util.AMSendMail;
 import com.sun.identity.authentication.spi.AuthLoginException;
-
+import java.net.URI;
 
 
 /**
@@ -75,8 +77,11 @@ public class EmailNotifyNode extends SingleOutcomeNode {
         char[] smtpUserPassword();
         @Attribute(order = 900)
         default boolean smtpSSLEnabled() { return false; }
+        @Attribute(order = 950)
+        default boolean suspendEnabled() { return false; }
     }
 
+    static final String RESUME_URI = "resumeURI";
     private final Config config;
     private final CoreWrapper coreWrapper;
     private final static String NODE_NAME = "EmailNotifyNode";
@@ -95,7 +100,10 @@ public class EmailNotifyNode extends SingleOutcomeNode {
 
     @Override
     public Action process(TreeContext context) throws NodeProcessException {
-
+        if (context.hasResumedFromSuspend()) {
+            debug.debug("[" + NODE_NAME + "]: " + "resumed suspended journey");
+            return goToNext().build();
+        }
         AMIdentity userIdentity = coreWrapper.getIdentity(context.sharedState.get(USERNAME).asString(), context.sharedState.get(REALM).asString());
         String emailAddr = "";
 
@@ -117,13 +125,20 @@ public class EmailNotifyNode extends SingleOutcomeNode {
             }
         }
 
-        // Substitute any variables found in subject and message
-        // Strings containing "{{var}}" will be replaced by the content of sharedState "var" if found
-        String subject = hydrate(context,config.subject());
-        String message = hydrate(context,config.message());
+        // create finals in order to call lambda
+        final String to = emailAddr;
+        final String from = config.from();
+        final String subject = config.subject();
+        final String message = config.message();
+
         try {
             debug.debug("[" + NODE_NAME + "]: " + "sending email to " + emailAddr);
-            sendEmailMessage(config.from(), emailAddr, subject, message);
+            if (config.suspendEnabled()) {
+                debug.debug("[" + NODE_NAME + "]: " + "suspending journey after email sent");
+                return suspend(resumeURI -> createSuspendOutcome(context, resumeURI, from, to, subject, message)).build();
+            } else {
+                sendEmailMessage(context, from, to, subject, message);
+            }
         } catch (AuthLoginException e) {
             debug.error("[" + NODE_NAME + "]: " + "AuthLoginException exception: " + e);
         }
@@ -154,7 +169,11 @@ public class EmailNotifyNode extends SingleOutcomeNode {
     /**
      * {@inheritDoc}
      */
-    public void sendEmailMessage(String from, String to, String subject, String message) throws AuthLoginException {
+    public void sendEmailMessage(TreeContext context, String from, String to, String subjectTemplate, String messageTemplate) throws AuthLoginException {
+        // Substitute any variables found in subject and message
+        // Strings containing "{{var}}" will be replaced by the content of sharedState "var" if found
+        String subject = hydrate(context,subjectTemplate);
+        String message = hydrate(context,messageTemplate);
 
         String smtpHostName = config.smtpHostName();
         String smtpHostPort = config.smtpHostPort();
@@ -165,6 +184,7 @@ public class EmailNotifyNode extends SingleOutcomeNode {
         }
         boolean sslEnabled = config.smtpSSLEnabled();
         boolean startTls = config.smtpSSLEnabled();
+        boolean suspendEnabled = config.suspendEnabled();
             
         // postMail expects an array of recipients
         String tos[] = new String[1];
@@ -188,6 +208,20 @@ public class EmailNotifyNode extends SingleOutcomeNode {
             debug.error("[" + NODE_NAME + "]: " + "sendMail exception: " + e);  
             throw new AuthLoginException("Failed to send email to " + to, e);
         }
+    }
+
+    private SuspendedTextOutputCallback createSuspendOutcome(TreeContext context, URI resumeURI,
+            String from, String to, String subject, String message)  {
+
+        String output = "An email has been sent to your inbox.";
+        debug.debug("[" + NODE_NAME + "]: " + "resumeURI: " + resumeURI);
+        context.sharedState.put(RESUME_URI, resumeURI.toString());
+        try {
+            sendEmailMessage(context, from, to, subject, message);
+        } catch (AuthLoginException e) {
+            output = "Error sending email";
+        }
+        return info(output);
     }
    
 }
